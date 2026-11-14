@@ -1,0 +1,37 @@
+name: Build Unsigned WebDriverAgent IPA
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-wda:
+    runs-on: macos-latest
+    steps:
+      - name: Clone Appium WebDriverAgent
+        run: |
+          git clone --depth 1 https://github.com/appium/WebDriverAgent.git wda
+
+      - name: Build WebDriverAgentRunner (unsigned)
+        working-directory: wda
+        run: |
+          xcodebuild build-for-testing \
+            -project WebDriverAgent.xcodeproj \
+            -scheme WebDriverAgentRunner \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath derived \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Package WebDriverAgent.ipa
+        working-directory: wda
+        run: |
+          mkdir -p Payload
+          cp -r derived/Build/Products/Debug-iphoneos/WebDriverAgentRunner-Runner.app Payload/
+          zip -r ../WebDriverAgent.ipa Payload
+
+      - name: Upload WebDriverAgent.ipa artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WebDriverAgent-ipa
+          path: WebDriverAgent.ipa
